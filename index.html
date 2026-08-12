@@ -3,162 +3,142 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>lclbrf — coming soon</title>
-<meta name="description" content="lclbrf — hyperlocal news, briefed. Coming soon.">
+<title>lclbrf</title>
+<meta name="description" content="lclbrf — the local brief. One email a week: what's on, what changed, and who's open, for one zip code at a time. Not published yet.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta property="og:title" content="lclbrf">
+<meta property="og:description" content="the local brief — your town, in five minutes">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://lclbrf.com/">
 <style>
+  /* The paper's own tokens (packages/core/styles/tokens.css + the `plain`
+     preset). Copied rather than imported because this page is a single file
+     on GitHub Pages with no build step — if the palette changes there, it
+     changes here by hand. */
   :root {
-    --paper: #F2EEE4;
-    --paper-raised: #FFFDF8;
-    --ink: #1F2421;
-    --slate: #5B6660;
-    --line: #D8D0BF;
-    --accent: #C65D2E;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --paper: #14171A;
-      --paper-raised: #1B1F22;
-      --ink: #ECE7DA;
-      --slate: #8C948C;
-      --line: #2B2F31;
-      --accent: #E8834A;
-    }
+    --color-primary: #0000cc;
+    --color-bg: #ffffff;
+    --color-text: #111111;
+    --color-muted: #666666;
+    --color-surface: #f2f2f2;
+    --font: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    --radius: 3px;
+    --max-width: 46rem;
   }
   * { box-sizing: border-box; }
-  html, body {
-    margin: 0;
-    height: 100%;
-  }
   body {
-    background: var(--paper);
-    color: var(--ink);
-    font-family: Georgia, "Times New Roman", serif;
-    -webkit-font-smoothing: antialiased;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font);
+    line-height: 1.6;
   }
-  main {
-    max-width: 480px;
+  main { max-width: var(--max-width); margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+  a { color: var(--color-primary); }
+
+  /* The masthead: the corridor drawn from OpenStreetMap, with the name on it.
+     Same treatment as every page of the paper itself — a mask over a
+     currentColor block, so the drawing is in the page's own ink. */
+  .masthead { display: grid; margin-bottom: 2rem; }
+  .masthead > * { grid-area: 1 / 1; }
+  .townmap {
+    aspect-ratio: 7.5 / 1;
     width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 28px;
+    background-color: var(--color-text);
+    opacity: .28;
+    -webkit-mask: url('/region.svg') center / 100% 100% no-repeat;
+    mask: url('/region.svg') center / 100% 100% no-repeat;
   }
-  .mark { width: 88px; height: 88px; }
-  .wordmark {
-    font-family: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
-    font-size: 28px;
-    letter-spacing: 0.04em;
-    font-weight: 600;
+  @supports not ((mask-image: none) or (-webkit-mask-image: none)) {
+    .townmap { background: url('/region.svg') center / 100% 100% no-repeat; opacity: 1; }
   }
-  .wordmark .l { color: var(--accent); }
+  .masthead-body { align-self: center; padding: 0 .25rem; }
   h1 {
-    margin: 0;
-    font-size: 22px;
-    font-weight: 400;
-    line-height: 1.4;
-    text-wrap: balance;
-  }
-  p.sub {
-    margin: 0;
-    font-size: 15px;
-    line-height: 1.65;
-    color: var(--slate);
-    max-width: 38ch;
-  }
-  .eyebrow {
-    font-family: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
-    font-size: 11px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--accent);
-  }
-  form {
     display: flex;
-    gap: 8px;
-    width: 100%;
-    max-width: 360px;
-    flex-wrap: wrap;
-    justify-content: center;
+    align-items: center;
+    gap: .5rem;
+    margin: 0;
+    font-size: clamp(2rem, 7vw, 3rem);
+    letter-spacing: -.01em;
   }
-  input[type="email"] {
-    flex: 1;
-    min-width: 200px;
-    padding: 11px 14px;
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    background: var(--paper-raised);
-    color: var(--ink);
-    font-family: Georgia, serif;
-    font-size: 14px;
+  h1::before {
+    content: '';
+    flex: 0 0 auto;
+    width: 1.35em;
+    height: 1.35em;
+    background: url('/favicon.svg') center / contain no-repeat;
   }
-  input[type="email"]:focus {
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
+  .tagline {
+    margin: .1rem 0 0;
+    color: color-mix(in srgb, var(--color-muted) 55%, var(--color-text));
+    font-size: 1.05rem;
   }
-  button {
-    padding: 11px 18px;
-    border: none;
-    border-radius: 4px;
-    background: var(--accent);
-    color: var(--paper-raised);
-    font-family: ui-monospace, monospace;
-    font-size: 12px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    cursor: pointer;
-  }
-  button:hover { opacity: 0.9; }
-  button:focus-visible, input:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
+
+  h2 { font-size: 1rem; margin: 2rem 0 .4rem; }
+  p { margin: .6rem 0; }
+  .lead { font-size: 1.15rem; }
+  ul.what { list-style: none; margin: .5rem 0; padding: 0; }
+  ul.what li {
+    padding: .35rem 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-muted) 25%, transparent);
   }
   .note {
-    font-size: 12px;
-    color: var(--slate);
-    margin: 0;
+    background: var(--color-surface);
+    border-radius: var(--radius);
+    padding: .8rem 1rem;
+    margin-top: 1.5rem;
   }
   footer {
-    font-family: ui-monospace, monospace;
-    font-size: 11px;
-    color: var(--slate);
-    letter-spacing: 0.04em;
+    margin-top: 2.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid color-mix(in srgb, var(--color-muted) 30%, transparent);
+    color: var(--color-muted);
+    font-size: .85rem;
   }
+  footer p { margin: .25rem 0; }
 </style>
 </head>
 <body>
 <main>
-  <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
-    <path d="M50 6 C26 6 10 24 10 46 C10 64 28 76 42 84 C45.5 86 47.5 88 50 94 C52.5 88 54.5 86 58 84 C72 76 90 64 90 46 C90 24 74 6 50 6 Z" fill="var(--accent)"/>
-    <rect x="30" y="16" width="40" height="46" fill="var(--paper-raised)"/>
-    <path d="M58 16 L70 16 L70 28 Z" fill="var(--accent)"/>
-    <line x1="58" y1="16" x2="70" y2="28" stroke="var(--ink)" stroke-width="1" opacity="0.45"/>
-    <rect x="36" y="30" width="26" height="6" fill="var(--ink)"/>
-    <rect x="36" y="41" width="28" height="3.5" fill="var(--ink)" opacity="0.85"/>
-    <rect x="36" y="49" width="28" height="3.5" fill="var(--ink)" opacity="0.85"/>
-    <rect x="36" y="57" width="18" height="3.5" fill="var(--ink)" opacity="0.85"/>
-  </svg>
-
-  <span class="wordmark"><span class="l">l</span>clbrf</span>
-
-  <div>
-    <div class="eyebrow" style="margin-bottom:10px;">coming soon</div>
-    <h1>The news for your block, in the time it takes to read a headline.</h1>
+  <div class="masthead">
+    <div class="townmap" role="presentation"></div>
+    <div class="masthead-body">
+      <h1>lclbrf</h1>
+      <p class="tagline">the local brief — your town, in five minutes</p>
+    </div>
   </div>
 
-  <p class="sub">lclbrf is a hyperlocal brief — council votes, road closures, market days, the stuff a wire feed skips. We're building it now.</p>
+  <p class="lead">
+    A weekly email about one zip code at a time: what's on this week, what changed
+    at the town hall, which road is closed, and who's open down the street.
+  </p>
 
-  <form action="#" method="post" onsubmit="return false;">
-    <input type="email" name="email" placeholder="you@somewhere.com" required aria-label="Email address">
-    <button type="submit">Notify me</button>
-  </form>
-  <p class="note">No spam — one email, when we launch.</p>
+  <h2>What's in it</h2>
+  <ul class="what">
+    <li>Everything on the calendar near you, submitted by neighbours</li>
+    <li>Council agendas, road work and the dates that actually affect a week</li>
+    <li>A directory of the businesses in your zip — free, and not an advert</li>
+    <li>Every edition kept at its own address, readable years later</li>
+  </ul>
 
-  <footer>lclbrf.com</footer>
+  <h2>Not published yet</h2>
+  <p>
+    The paper is built and running privately while the first corridor's content is
+    assembled. There is no signup here yet, deliberately: an email address collected
+    months before the first edition is an email address nobody remembers giving.
+  </p>
+  <p class="note">
+    If you run something local and want to be in the directory when it opens, or you
+    want the brief for your town, say so at
+    <a href="https://smbaiguy.com" rel="noopener">smbaiguy.com</a>.
+  </p>
+
+  <footer>
+    <p>Published by <a href="https://smbaiguy.com" rel="noopener">SMB AI Guy</a> ·
+       Enthropic Data LLC · Indian Trail, NC</p>
+    <p>Map data &copy; <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a>
+       contributors (ODbL).</p>
+  </footer>
 </main>
 </body>
 </html>
