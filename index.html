@@ -88,6 +88,33 @@
     padding: .8rem 1rem;
     margin-top: 1.5rem;
   }
+  form { display: flex; flex-wrap: wrap; gap: .5rem; margin: .8rem 0 .4rem; }
+  input[type=email] { flex: 1 1 16rem; }
+  input[type=text] { flex: 0 0 7rem; }
+  input {
+    min-width: 0;
+    padding: .55rem .6rem;
+    font: inherit;
+    color: var(--color-text);
+    background: var(--color-bg);
+    border: 1px solid color-mix(in srgb, var(--color-muted) 60%, transparent);
+    border-radius: var(--radius);
+  }
+  button {
+    padding: .55rem 1.1rem;
+    font: inherit;
+    color: #fff;
+    background: var(--color-primary);
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+  button[disabled] { opacity: .6; cursor: default; }
+  .cap-slot:empty { display: none; }
+  .cap-slot { flex: 1 1 100%; }
+  .small { font-size: .82rem; color: var(--color-muted); }
+  .msg { flex: 1 1 100%; margin: .2rem 0 0; }
+  .msg.err { color: #a11; }
   footer {
     margin-top: 2.5rem;
     padding-top: 1rem;
@@ -124,13 +151,36 @@
   <h2>Not published yet</h2>
   <p>
     The paper is built and running privately while the first corridor's content is
-    assembled. There is no signup here yet, deliberately: an email address collected
-    months before the first edition is an email address nobody remembers giving.
+    assembled. It starts when there is enough worth reading in a town to be worth
+    five minutes of a Thursday — not before.
   </p>
-  <p class="note">
-    If you run something local and want to be in the directory when it opens, or you
-    want the brief for your town, say so at
+
+  <h2>Tell me when it starts</h2>
+  <p>
+    Leave an address and the zip you care about. You will get one email — the first
+    edition for your town — and nothing before it.
+  </p>
+
+  <form id="f" novalidate>
+    <input type="email" name="email" required placeholder="you@example.com" aria-label="Email address">
+    <input type="text" name="zip" inputmode="numeric" pattern="[0-9]{5}" maxlength="5"
+           placeholder="28110" aria-label="Zip code">
+    <!-- honeypot: named for what a bot expects to find -->
+    <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true"
+           style="position:absolute;left:-9999px">
+    <div class="cap-slot" id="cap"></div>
+    <button type="submit">Tell me</button>
+    <p class="msg small" id="msg" role="status"></p>
+  </form>
+  <p class="small">
+    Stored: the address, the zip, and when you gave them. Nothing else, no tracking,
+    and one tap to be removed at any time — reply to that first edition, or write to
     <a href="https://smbaiguy.com" rel="noopener">smbaiguy.com</a>.
+  </p>
+
+  <p class="note">
+    Run something local? The directory is free and is not an advert — you can be in it
+    whether or not you ever buy anything. Say so the same way.
   </p>
 
   <footer>
@@ -140,5 +190,83 @@
        contributors (ODbL).</p>
   </footer>
 </main>
+<script>
+  // Proof of work, from the same Cap instance that will verify the token —
+  // issuing on one and checking on another is the mistake this pattern is
+  // shaped to avoid. The widget, its WASM and the verification all live behind
+  // signup.lclbrf.com, which is the paper's own edge, not a third party.
+  (() => {
+    const API = 'https://signup.lclbrf.com';
+    const CAP = API + '/_cap';
+    const SITE_KEY = '203bf5e75f';
+    const form = document.getElementById('f');
+    const msg = document.getElementById('msg');
+    const slot = document.getElementById('cap');
+    const btn = form.querySelector('button');
+    let widget = null, solving = null, capUsable = true;
+
+    const say = (text, bad) => { msg.textContent = text; msg.className = 'msg small' + (bad ? ' err' : ''); };
+
+    window.CAP_CUSTOM_WASM_URL = CAP + '/assets/cap_wasm_bg.wasm';
+    const s = document.createElement('script');
+    s.src = CAP + '/assets/widget.js';
+    s.onload = () => {
+      widget = document.createElement('cap-widget');
+      widget.setAttribute('data-cap-api-endpoint', CAP + '/' + SITE_KEY + '/');
+      slot.appendChild(widget);
+      // Solve when someone starts typing, not on page load: no reason to spend
+      // a reader's CPU on a page they are only reading.
+      form.addEventListener('input', solve, { once: true });
+      form.addEventListener('focusin', solve, { once: true });
+    };
+    s.onerror = () => { capUsable = false; };
+    document.head.appendChild(s);
+
+    function solve() {
+      if (!widget || solving) return solving;
+      solving = new Promise((resolve) => {
+        widget.addEventListener('solve', (e) => resolve((e.detail && e.detail.token) || ''), { once: true });
+        widget.addEventListener('error', () => resolve(''), { once: true });
+        try { widget.solve(); } catch { resolve(''); }
+      });
+      return solving;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = form.email.value.trim();
+      if (!email || !/^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(email)) {
+        return say('That does not look like an email address.', true);
+      }
+      const zip = form.zip.value.trim();
+      if (zip && !/^\d{5}$/.test(zip)) return say('A zip code is five digits.', true);
+      if (!capUsable) return say("The check couldn't load. Try again later, or write via smbaiguy.com.", true);
+
+      btn.disabled = true; say('One moment…');
+      const token = await solve();
+      const body = new URLSearchParams({
+        email, zip, website: form.website.value, cap_token: token || '',
+        source: 'lclbrf.com',
+        // What they were promised, recorded with the address. The promise is
+        // part of the consent.
+        promise: 'One email — the first edition for your town — and nothing before it.',
+      });
+      try {
+        const res = await fetch(API + '/_digest/interest', {
+          method: 'POST', body,
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+        form.querySelectorAll('input').forEach((i) => { i.value = ''; });
+        say("You're on the list. The next thing you hear from us is the first edition.");
+      } catch (err) {
+        say(err.message || 'Something went wrong — try again in a minute.', true);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+</script>
 </body>
 </html>
